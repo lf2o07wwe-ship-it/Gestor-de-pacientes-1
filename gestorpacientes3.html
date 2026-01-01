@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Pacientes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      /* Fondo azul marino con patrón médico repetido */
+      background-color: #0A1931;
+      background-image: url('medical_background.png');
+      background-size: 400px 400px;
+      background-repeat: repeat;
+      color: #f5f7fa;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #C9D6DF;
+    }
+
+    /* Container for patient cards */
+    #card-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    /* Individual patient card */
+    .patient-card {
+      position: relative;
+      width: 220px;
+      min-height: 120px;
+      background-color: #162447;
+      border: 1px solid #274690;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .patient-card:hover {
+      background-color: #243b55;
+    }
+
+    /* Status color indicators on card */
+    .patient-card.estable {
+      border-left: 6px solid #28a745;
+    }
+    .patient-card.inestable {
+      border-left: 6px solid #ffc107;
+    }
+    .patient-card.critico {
+      border-left: 6px solid #dc3545;
+    }
+
+    .patient-card .delete-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    /* General button styling */
+    button {
+      background-color: #0D47A1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #1238A0;
+    }
+
+    /* Override specific button sizes in tools (set via inline) */
+
+    /* Modal overlay */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    /* Modal content */
+    #patient-modal {
+      background-color: #162447;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      color: #f5f5f5;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+
+    #patient-modal h2 {
+      margin-top: 0;
+      color: #AFCDE7;
+    }
+
+    #patient-form label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #C9D6DF;
+    }
+
+    #patient-form input,
+    #patient-form textarea,
+    #patient-form select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #274690;
+      border-radius: 4px;
+      margin-top: 4px;
+      background-color: #1f2a44;
+      color: #f5f7fa;
+    }
+
+    #patient-form textarea {
+      resize: vertical;
+    }
+
+    #modal-buttons {
+      margin-top: 20px;
+      text-align: right;
+    }
+
+    #modal-buttons button {
+      margin-left: 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #save-btn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    #save-btn:hover {
+      background-color: #218838;
+    }
+
+    #cancel-btn {
+      background-color: #6c757d;
+      color: white;
+    }
+
+    #cancel-btn:hover {
+      background-color: #5a6268;
+    }
+
+    @media (max-width: 500px) {
+      .patient-card {
+        width: 100%;
+      }
+    }
+
+    /* Section headings inside modal */
+    #patient-modal h3 {
+      margin-top: 20px;
+      margin-bottom: 8px;
+      color: #AFCDE7;
+      border-bottom: 1px solid #415A77;
+      padding-bottom: 4px;
+    }
+
+    /* Medication row and note item styles */
+    .med-row, .note-item {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .med-row input, .note-item textarea {
+      flex: 1 1 calc(25% - 10px);
+      min-width: 80px;
+    }
+    .note-item textarea {
+      flex-basis: 100%;
+    }
+    .remove-med-btn, .remove-note-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+    }
+    .note-date {
+      font-size: 12px;
+      color: #A0AFC0;
+      flex-basis: 100%;
+    }
+
+    /* Task row styles */
+    .task-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .task-row input {
+      flex: 1 1 calc(80% - 10px);
+      min-width: 100px;
+    }
+    .remove-task-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+    }
+
+    /* Global tasks list styles */
+    #pending-tasks ul li {
+      background-color: #162447;
+      border: 1px solid #274690;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: #f5f7fa;
+    }
+    .complete-task-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    /* Pediatric modal override: use light background and dark text for readability */
+    #pediatric-modal {
+      background-color: #F5F7FA !important;
+      color: #0A1931 !important;
+    }
+    #pediatric-modal h2,
+    #pediatric-modal p {
+      color: #0A1931;
+    }
+    #pediatric-modal table th,
+    #pediatric-modal table td {
+      color: #0A1931;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gestor de Pacientes</h1>
+  <!-- Search bar to filter patients by cama, nombre o diagnóstico -->
+  <input type="text" id="search-input" placeholder="Buscar por cama, nombre o diagnóstico" style="display:block;margin:0 auto 20px;width:100%;max-width:400px;padding:8px;border:1px solid #274690;border-radius:4px;background-color:#1f2a44;color:#f5f7fa;">
+
+  <!-- Tools container: patient and utility buttons -->
+  <div id="tools" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:20px;">
+    <button id="add-patient-btn" style="padding:10px 20px;">Agregar paciente</button>
+    <button id="pediatric-btn" style="padding:10px 20px;">Guía pediátrica</button>
+    <button id="calculator-btn" style="padding:10px 20px;">Calculadora de dosis</button>
+    <button id="export-btn" style="padding:10px 20px;">Exportar datos</button>
+    <label for="import-file" style="padding:10px 20px;background-color:#0D47A1;color:white;border-radius:4px;cursor:pointer;">
+      Importar datos
+      <input type="file" id="import-file" accept=".json" style="display:none;">
+    </label>
+  </div>
+
+  <!-- Global pending tasks section -->
+  <div id="pending-tasks" style="margin-bottom:20px; display:none;">
+    <h3 style="margin-top:0; margin-bottom:10px; color:#AFCDE7; border-bottom:1px solid #415A77; padding-bottom:4px;">Tareas pendientes</h3>
+    <ul id="tasks-list" style="list-style:none; padding-left:0; margin:0;"></ul>
+  </div>
+
+  <div id="card-container"></div>
+
+  <!-- Modal for adding/editing a patient -->
+  <div id="modal-overlay">
+    <div id="patient-modal">
+      <h2 id="modal-title">Nuevo paciente</h2>
+      <form id="patient-form" onsubmit="return false;">
+        <label for="bedNumber">Número de cama</label>
+        <input type="text" id="bedNumber" required>
+
+        <label for="patientName">Nombre del paciente</label>
+        <input type="text" id="patientName" required>
+
+        <label for="diagnosis">Diagnóstico</label>
+        <input type="text" id="diagnosis">
+
+        <label for="admissionDate">Fecha de ingreso</label>
+        <input type="date" id="admissionDate">
+
+        <label for="history">Historia clínica</label>
+        <textarea id="history" rows="2"></textarea>
+
+        <label for="antecedents">Antecedentes</label>
+        <textarea id="antecedents" rows="2"></textarea>
+
+        <!-- Medication section -->
+        <h3>Medicamentos / Antibióticos</h3>
+        <div id="medications-container"></div>
+        <button type="button" id="add-med-btn" style="margin-top:8px;">+ Añadir medicamento</button>
+
+        <!-- Vital signs section -->
+        <h3>Signos vitales</h3>
+        <label for="temp">Temperatura (°C)</label>
+        <input type="number" id="temp" step="0.1">
+
+        <label for="hr">Frecuencia cardíaca (lpm)</label>
+        <input type="number" id="hr">
+
+        <label for="bp">Presión arterial (mmHg)</label>
+        <input type="text" id="bp">
+
+        <label for="rr">Frecuencia respiratoria (rpm)</label>
+        <input type="number" id="rr">
+
+        <label for="spo2">Saturación de O₂ (%)</label>
+        <input type="number" id="spo2">
+
+        <!-- Status section -->
+        <h3>Estado</h3>
+        <select id="status">
+          <option value="estable">Estable</option>
+          <option value="inestable">Inestable</option>
+          <option value="critico">Crítico</option>
+        </select>
+
+        <!-- Notes section -->
+        <h3>Notas</h3>
+        <div id="notes-container"></div>
+        <button type="button" id="add-note-btn" style="margin-top:8px;">+ Añadir nota</button>
+
+        <!-- Tasks section -->
+        <h3>Tareas pendientes</h3>
+        <div id="tasks-container"></div>
+        <button type="button" id="add-task-btn" style="margin-top:8px;">+ Añadir tarea</button>
+      </form>
+      <div id="modal-buttons">
+        <button id="cancel-btn" type="button">Cancelar</button>
+        <button id="save-btn" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pediatric dosing guide modal -->
+  <div id="pediatric-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0, 0, 0, 0.4); align-items:center; justify-content:center; z-index:1000;">
+    <div id="pediatric-modal" style="background-color:#fff; padding:20px; border-radius:8px; width:90%; max-width:600px; max-height:80%; overflow-y:auto; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+      <h2>Guía de dosis pediátricas</h2>
+      <p>Esta tabla ofrece dosificación aproximada para algunos medicamentos pediátricos comunes. Utilice estos datos solo como referencia inicial y verifique siempre las recomendaciones oficiales en cada paciente.</p>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="border-bottom:1px solid #ccc; padding:8px; text-align:left;">Medicamento</th>
+            <th style="border-bottom:1px solid #ccc; padding:8px; text-align:left;">Dosis (mg/kg/dosis)</th>
+            <th style="border-bottom:1px solid #ccc; padding:8px; text-align:left;">Intervalo</th>
+            <th style="border-bottom:1px solid #ccc; padding:8px; text-align:left;">Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:6px 8px;">Acetaminofén (paracetamol)</td>
+            <td style="padding:6px 8px;">10–15 mg/kg/dosis</td>
+            <td style="padding:6px 8px;">Cada 4–6 h</td>
+            <td style="padding:6px 8px;">Máximo &lt;2 años: 60 mg/kg/día; ≥2 años: 75 mg/kg/día o 4 g/día【188312344607879†L8-L13】</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px;">Ibuprofeno</td>
+            <td style="padding:6px 8px;">5–10 mg/kg/dosis</td>
+            <td style="padding:6px 8px;">Cada 6–8 h</td>
+            <td style="padding:6px 8px;">Máximo 40 mg/kg/día o 400 mg por dosis; evitar en menores de 6 meses【188312344607879†L39-L44】</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px;">Amoxicilina</td>
+            <td style="padding:6px 8px;">25–45 mg/kg/dosis</td>
+            <td style="padding:6px 8px;">Cada 12 h</td>
+            <td style="padding:6px 8px;">Profilaxis de ITU: 10–15 mg/kg/dosis diario; asplenia: 10 mg/kg/dosis cada 12 h【188312344607879†L225-L233】</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px;">Azitromicina</td>
+            <td style="padding:6px 8px;">10 mg/kg (día 1), luego 5 mg/kg/día</td>
+            <td style="padding:6px 8px;">Día 1, luego diario</td>
+            <td style="padding:6px 8px;">Máximo 500 mg el primer día y 250 mg días 2–5【188312344607879†L248-L251】</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px;">Cefalexina</td>
+            <td style="padding:6px 8px;">15–30 mg/kg/dosis</td>
+            <td style="padding:6px 8px;">Cada 8 h</td>
+            <td style="padding:6px 8px;">Antibiótico para infecciones de piel, vías urinarias y respiratorias【188312344607879†L279-L281】</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px;">Ceftriaxona</td>
+            <td style="padding:6px 8px;">50–75 mg/kg/día</td>
+            <td style="padding:6px 8px;">Cada 24 h</td>
+            <td style="padding:6px 8px;">En meningitis: 100 mg/kg/día (máx. 2 g/dosis) cada 12–24 h【188312344607879†L270-L276】</td>
+          </tr>
+        <!-- Medicamentos adicionales comúnmente usados en pediatría -->
+        <tr>
+          <td style="padding:6px 8px;">Ampicilina</td>
+          <td style="padding:6px 8px;">25 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 4–6 h</td>
+          <td style="padding:6px 8px;">Antibiótico de amplio espectro para infecciones severas【741218658230703†L181-L185】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Cefazolina</td>
+          <td style="padding:6px 8px;">30 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Antibiótico IV para cirugía y profilaxis【741218658230703†L181-L185】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Clindamicina</td>
+          <td style="padding:6px 8px;">5–10 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6–8 h</td>
+          <td style="padding:6px 8px;">Alternativa en alergia a penicilinas (máx. 4 g/día)【741218658230703†L181-L185】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Gentamicina</td>
+          <td style="padding:6px 8px;">2–2.5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 8 h</td>
+          <td style="padding:6px 8px;">Uso en infecciones graves (máx. 80 mg por dosis)【741218658230703†L181-L185】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Metronidazol</td>
+          <td style="padding:6px 8px;">Carga 15 mg/kg, luego 7.5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Antimicrobiano para infecciones anaerobias【741218658230703†L186-L188】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Vancomicina</td>
+          <td style="padding:6px 8px;">10 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Administración IV lenta para bacterias resistentes【741218658230703†L190-L192】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Ampicilina/Sulbactam (Unasyn)</td>
+          <td style="padding:6px 8px;">75 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6–8 h</td>
+          <td style="padding:6px 8px;">Administrar IV durante 10–15 min【741218658230703†L190-L192】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Piperacilina/Tazobactam (Zosyn)</td>
+          <td style="padding:6px 8px;">150–400 mg/kg/día</td>
+          <td style="padding:6px 8px;">Dividir cada 6–8 h</td>
+          <td style="padding:6px 8px;">150–300 mg/kg/día si &lt;6 meses; 240–400 mg/kg/día si ≥6 meses【741218658230703†L193-L196】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Captopril</td>
+          <td style="padding:6px 8px;">0.1–5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 8 h</td>
+          <td style="padding:6px 8px;">Antihipertensivo; ajustar dosis según respuesta【741218658230703†L202-L205】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Diazóxido</td>
+          <td style="padding:6px 8px;">5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Dosis única IV</td>
+          <td style="padding:6px 8px;">Administración IV rápida; máximo 10 mg/kg【741218658230703†L202-L205】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Hidralazina</td>
+          <td style="padding:6px 8px;">0.1–0.2 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 4–6 h</td>
+          <td style="padding:6px 8px;">Vía IM o IV; vasodilatador arterial【741218658230703†L209-L211】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Labetalol</td>
+          <td style="padding:6px 8px;">0.25 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 1–2 h</td>
+          <td style="padding:6px 8px;">Uso en crisis hipertensivas pediátricas【741218658230703†L209-L211】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Propranolol</td>
+          <td style="padding:6px 8px;">0.01–0.15 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6–8 h</td>
+          <td style="padding:6px 8px;">Administración IV lenta para arritmias【741218658230703†L216-L218】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Acetaminofén + Codeína</td>
+          <td style="padding:6px 8px;">0.5–1 mg codeína/kg + 10–15 mg acetaminofén/kg</td>
+          <td style="padding:6px 8px;">Cada 4 h</td>
+          <td style="padding:6px 8px;">Analgesia moderada; monitorizar dosis máxima【741218658230703†L225-L231】【741218658230703†L249-L253】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Ketorolac</td>
+          <td style="padding:6px 8px;">0.5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Analgésico IV; máximo 5 días【741218658230703†L233-L235】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Fentanilo</td>
+          <td style="padding:6px 8px;">0.5–1 µg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 1 h</td>
+          <td style="padding:6px 8px;">Opioide potente para analgesia IV【741218658230703†L256-L257】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Hidrocodona/Oxicodona</td>
+          <td style="padding:6px 8px;">0.05–0.15 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 4 h</td>
+          <td style="padding:6px 8px;">Opioide oral; iniciar con 0.1 mg/kg【741218658230703†L258-L259】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Morfina</td>
+          <td style="padding:6px 8px;">0.05–0.15 mg/kg (IV) o 0.2–0.3 mg/kg (VO)</td>
+          <td style="padding:6px 8px;">IV cada 2–4 h; VO cada 4 h</td>
+          <td style="padding:6px 8px;">Uso en dolor agudo o postoperatorio【741218658230703†L278-L280】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Metoclopramida</td>
+          <td style="padding:6px 8px;">0.1–0.2 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Antiemético; vigilar signos extrapiramidales【741218658230703†L291-L293】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Omeprazol</td>
+          <td style="padding:6px 8px;">0.6–0.7 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">1–2 veces/día</td>
+          <td style="padding:6px 8px;">Inhibidor de la bomba de protones【741218658230703†L296-L298】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Ondansetrón</td>
+          <td style="padding:6px 8px;">0.15 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 8 h</td>
+          <td style="padding:6px 8px;">Antiemético; máx. 8 mg/dosis【741218658230703†L300-L303】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Difenhidramina</td>
+          <td style="padding:6px 8px;">0.5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Antihistamínico para alergias y prurito【741218658230703†L324-L325】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Hidroxicina</td>
+          <td style="padding:6px 8px;">0.5 mg/kg/dosis</td>
+          <td style="padding:6px 8px;">Cada 6 h</td>
+          <td style="padding:6px 8px;">Antihistamínico sedante y antiprurítico【741218658230703†L324-L326】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Salbutamol (albuterol)</td>
+          <td style="padding:6px 8px;">0.01 ml/kg (0.5% soln) en 2.5 ml SF</td>
+          <td style="padding:6px 8px;">Según necesidad</td>
+          <td style="padding:6px 8px;">Broncodilatador nebulizado; máx. 0.5 ml【741218658230703†L331-L335】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Aminofilina</td>
+          <td style="padding:6px 8px;">Carga 7 mg/kg; mantenimiento 0.5–1.5 mg/kg/h</td>
+          <td style="padding:6px 8px;">Infusión continua</td>
+          <td style="padding:6px 8px;">Teofilina IV para asma; ajustar niveles【741218658230703†L337-L340】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Epinefrina (1:1000)</td>
+          <td style="padding:6px 8px;">0.01 ml/kg</td>
+          <td style="padding:6px 8px;">Una dosis SC</td>
+          <td style="padding:6px 8px;">Anafilaxia y broncoespasmo; máx. 0.4 ml【741218658230703†L341-L343】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Epinefrina racémica</td>
+          <td style="padding:6px 8px;">0.25–0.5 ml en 5 ml SF</td>
+          <td style="padding:6px 8px;">Nebulizada</td>
+          <td style="padding:6px 8px;">Para laringitis y bronquilitis【741218658230703†L343-L344】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Atropina</td>
+          <td style="padding:6px 8px;">0.01–0.03 mg/kg</td>
+          <td style="padding:6px 8px;">Dosis única</td>
+          <td style="padding:6px 8px;">Bradicardia sintomática; vías IM/IV/ET【741218658230703†L119-L121】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Adenosina</td>
+          <td style="padding:6px 8px;">0.1 mg/kg (puede repetir 0.2 mg/kg)</td>
+          <td style="padding:6px 8px;">IV en bolo</td>
+          <td style="padding:6px 8px;">Para taquicardia supraventricular【741218658230703†L158-L160】</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px;">Diazepam</td>
+          <td style="padding:6px 8px;">0.1–0.3 mg/kg</td>
+          <td style="padding:6px 8px;">Según indicación</td>
+          <td style="padding:6px 8px;">Anticonvulsivante y sedante【741218658230703†L166-L168】</td>
+        </tr>
+        </tbody>
+      </table>
+      <div style="text-align:right; margin-top:20px;">
+        <button id="close-pediatric-btn" style="background-color:#6c757d; color:white; border:none; border-radius:4px; padding:8px 16px; cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculator modal for medication dosing -->
+  <div id="calculator-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0, 0, 0, 0.4); align-items:center; justify-content:center; z-index:1000;">
+    <div id="calculator-modal" style="background-color:#fff; color:#0A1931; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:80%; overflow-y:auto; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+      <h2 style="margin-top:0;">Calculadora de dosis</h2>
+      <p>Seleccione un medicamento e ingrese el peso del paciente para calcular la dosis aproximada. Estos cálculos son referenciales; confirme siempre con las guías clínicas.</p>
+      <label for="medication-select" style="display:block; margin-top:10px; font-weight:bold;">Medicamento</label>
+      <select id="medication-select" style="width:100%; padding:8px; margin-top:4px; border:1px solid #ccc; border-radius:4px;"></select>
+      <label for="weight-input" style="display:block; margin-top:10px; font-weight:bold;">Peso (kg)</label>
+      <input type="number" id="weight-input" min="0" step="0.1" style="width:100%; padding:8px; margin-top:4px; border:1px solid #ccc; border-radius:4px;">
+      <div id="dose-result" style="margin-top:20px; font-weight:bold;"></div>
+      <div style="text-align:right; margin-top:20px;">
+        <button id="close-calculator-btn" style="background-color:#6c757d; color:white; border:none; border-radius:4px; padding:8px 16px; cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utility to compute days between two dates (inclusive)
+    function computeDays(start, end) {
+      if (!start) return '';
+      const startDate = new Date(start);
+      const endDate = end ? new Date(end) : new Date();
+      // Normalize times to midnight to avoid timezone issues
+      startDate.setHours(0,0,0,0);
+      endDate.setHours(0,0,0,0);
+      const diffMs = endDate - startDate;
+      if (diffMs < 0) return '';
+      return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    }
+    // Retrieve patients from localStorage
+    function getPatients() {
+      return JSON.parse(localStorage.getItem('patients') || '[]');
+    }
+
+    // Save patients to localStorage
+    function setPatients(patients) {
+      localStorage.setItem('patients', JSON.stringify(patients));
+    }
+
+    // Load patients and render cards
+    function loadPatients() {
+      const patients = getPatients();
+      const container = document.getElementById('card-container');
+      container.innerHTML = '';
+      // Filter by search term if provided
+      const searchInput = document.getElementById('search-input');
+      let searchTerm = '';
+      if (searchInput) {
+        searchTerm = searchInput.value.toLowerCase();
+      }
+      patients.forEach((patient, index) => {
+        const term = searchTerm;
+        // Determine if patient matches search term
+        if (term) {
+          const bed = (patient.bedNumber || '').toLowerCase();
+          const name = (patient.patientName || '').toLowerCase();
+          const diag = (patient.diagnosis || '').toLowerCase();
+          if (!bed.includes(term) && !name.includes(term) && !diag.includes(term)) {
+            return; // skip this patient
+          }
+        }
+        renderCard(patient, index);
+      });
+      // Update global pending tasks list
+      updatePendingTasks();
+    }
+
+    // Render a single patient card
+    function renderCard(patient, index) {
+      const container = document.getElementById('card-container');
+      const card = document.createElement('div');
+      // Apply status class to card for color indicator
+      card.className = 'patient-card ' + (patient.status || 'estable');
+      card.dataset.index = index;
+      // Compute days of hospital stay and days of medication
+      const daysStay = computeDays(patient.admissionDate);
+      const stayText = daysStay ? `<div style="font-size:12px;color:#A0AFC0;">${daysStay} día${daysStay === 1 ? '' : 's'} de estancia</div>` : '';
+      const medCount = (patient.medications && patient.medications.length) ? patient.medications.length : 0;
+      const medText = medCount ? `<div style="font-size:12px;color:#A0AFC0;">${medCount} medicamento${medCount === 1 ? '' : 's'}</div>` : '';
+      const taskCount = (patient.tasks && patient.tasks.length) ? patient.tasks.filter(t => !t.completed).length : 0;
+      const taskText = taskCount ? `<div style="font-size:12px;color:#A0AFC0;">${taskCount} pendiente${taskCount === 1 ? '' : 's'}</div>` : '';
+      card.innerHTML = `
+        <button class="delete-btn" title="Eliminar">&times;</button>
+        <div><strong>Cama ${patient.bedNumber ? patient.bedNumber : ''}</strong></div>
+        <div>${patient.patientName ? patient.patientName : ''}</div>
+        ${stayText}
+        ${medText}
+        ${taskText}
+      `;
+      // Click to edit
+      card.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn')) {
+          return;
+        }
+        openModal(index);
+      });
+      // Delete action
+      const delBtn = card.querySelector('.delete-btn');
+      delBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        deletePatient(index);
+      });
+      container.appendChild(card);
+    }
+
+    // Open modal for new or existing patient
+    function openModal(index) {
+      const overlay = document.getElementById('modal-overlay');
+      const title = document.getElementById('modal-title');
+      const form = document.getElementById('patient-form');
+      overlay.dataset.index = index;
+      // Clear dynamic containers and reset fields
+      const medContainer = document.getElementById('medications-container');
+      const notesContainer = document.getElementById('notes-container');
+      const tasksContainer = document.getElementById('tasks-container');
+      medContainer.innerHTML = '';
+      notesContainer.innerHTML = '';
+      tasksContainer.innerHTML = '';
+      if (index != null && index !== '') {
+        title.textContent = 'Editar paciente';
+        const patients = getPatients();
+        const patient = patients[index];
+        // Populate form with existing values
+        form.bedNumber.value = patient.bedNumber || '';
+        form.patientName.value = patient.patientName || '';
+        form.diagnosis.value = patient.diagnosis || '';
+        form.admissionDate.value = patient.admissionDate || '';
+        form.history.value = patient.history || '';
+        form.antecedents.value = patient.antecedents || '';
+        // Vital signs
+        form.temp.value = patient.temp || '';
+        form.hr.value = patient.hr || '';
+        form.bp.value = patient.bp || '';
+        form.rr.value = patient.rr || '';
+        form.spo2.value = patient.spo2 || '';
+        // Status
+        form.status.value = patient.status || 'estable';
+        // Medications (array of objects)
+        if (patient.medications && patient.medications.length) {
+          patient.medications.forEach(med => addMedicationRow(med));
+        } else {
+          addMedicationRow();
+        }
+        // Notes (array of {text, date})
+        if (patient.notes && patient.notes.length) {
+          patient.notes.forEach(note => addNote(note));
+        }
+        // Tasks (array of {description, completed})
+        // Only show tasks that are not completed when editing an existing patient.
+        // Completed tasks remain hidden in the edit form because they are
+        // considered resolved and are not actionable. If there are no
+        // pending tasks, still provide one empty row so the user can add
+        // new tasks.
+        if (patient.tasks && patient.tasks.length) {
+          const pendingTasks = patient.tasks.filter(t => !t.completed);
+          if (pendingTasks.length) {
+            pendingTasks.forEach(task => addTaskRow(task));
+          } else {
+            addTaskRow();
+          }
+        } else {
+          addTaskRow();
+        }
+      } else {
+        title.textContent = 'Nuevo paciente';
+        form.reset();
+        form.status.value = 'estable';
+        // Add one empty medication row
+        addMedicationRow();
+        // Add one empty task row
+        addTaskRow();
+      }
+      overlay.style.display = 'flex';
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('modal-overlay').style.display = 'none';
+    }
+
+    // Save patient (new or update)
+    function savePatient() {
+      const overlay = document.getElementById('modal-overlay');
+      const index = overlay.dataset.index;
+      const form = document.getElementById('patient-form');
+      // Gather medications from dynamic rows
+      const meds = [];
+      document.querySelectorAll('#medications-container .med-row').forEach(row => {
+        const name = row.querySelector('.med-name').value.trim();
+        const dose = row.querySelector('.med-dose').value.trim();
+        const start = row.querySelector('.med-start').value;
+        const end = row.querySelector('.med-end').value;
+        if (name || dose || start || end) {
+          meds.push({ name, dose, start, end });
+        }
+      });
+      // Gather notes from dynamic list
+      const notes = [];
+      document.querySelectorAll('#notes-container .note-item').forEach(item => {
+        const text = item.querySelector('.note-text').value.trim();
+        const date = item.querySelector('.note-date').textContent;
+        if (text) {
+          notes.push({ text, date });
+        }
+      });
+
+      // Gather tasks from dynamic rows
+      const tasks = [];
+      document.querySelectorAll('#tasks-container .task-row').forEach(row => {
+        const description = row.querySelector('.task-desc').value.trim();
+        // Completed is always false upon creation in modal; tasks are marked complete from main list
+        if (description) {
+          // If editing existing tasks, keep existing completed state stored in dataset
+          const completedAttr = row.dataset.completed;
+          const completed = completedAttr === 'true';
+          tasks.push({ description, completed });
+        }
+      });
+      const patientData = {
+        bedNumber: form.bedNumber.value.trim(),
+        patientName: form.patientName.value.trim(),
+        diagnosis: form.diagnosis.value.trim(),
+        admissionDate: form.admissionDate.value,
+        history: form.history.value.trim(),
+        antecedents: form.antecedents.value.trim(),
+        medications: meds,
+        temp: form.temp.value,
+        hr: form.hr.value,
+        bp: form.bp.value.trim(),
+        rr: form.rr.value,
+        spo2: form.spo2.value,
+        status: form.status.value,
+        notes: notes,
+        tasks: tasks
+      };
+      let patients = getPatients();
+      if (index != null && index !== '') {
+        // Update existing
+        patients[index] = patientData;
+      } else {
+        // Add new
+        patients.push(patientData);
+      }
+      setPatients(patients);
+      closeModal();
+      loadPatients();
+    }
+
+    // Delete patient
+    function deletePatient(index) {
+      if (!confirm('¿Eliminar este paciente?')) {
+        return;
+      }
+      let patients = getPatients();
+      patients.splice(index, 1);
+      setPatients(patients);
+      loadPatients();
+    }
+
+    document.getElementById('add-patient-btn').addEventListener('click', () => openModal(''));
+    document.getElementById('cancel-btn').addEventListener('click', closeModal);
+    document.getElementById('save-btn').addEventListener('click', savePatient);
+
+    // Show pediatric dosing guide
+    document.getElementById('pediatric-btn').addEventListener('click', () => {
+      const overlay = document.getElementById('pediatric-overlay');
+      // Use flex display to center modal
+      overlay.style.display = 'flex';
+    });
+    // Close pediatric guide
+    document.getElementById('close-pediatric-btn').addEventListener('click', () => {
+      document.getElementById('pediatric-overlay').style.display = 'none';
+    });
+
+    // Search input event to filter patients
+    const searchInputElem = document.getElementById('search-input');
+    if (searchInputElem) {
+      searchInputElem.addEventListener('input', loadPatients);
+    }
+
+    // Initial render
+    loadPatients();
+
+    /**
+     * Add a new medication row to the medications container. A medication row contains
+     * inputs for nombre del medicamento, dosis, fecha de inicio y fecha de fin,
+     * along with a button to remove that row. When editing an existing patient,
+     * the function can receive an object with the corresponding values to pre-fill
+     * the fields (e.g., { name: 'Ceftriaxona', dose: '50 mg/kg', start: '2025-01-01', end: '2025-01-05' }).
+     */
+    function addMedicationRow(med = {}) {
+      const medContainer = document.getElementById('medications-container');
+      const row = document.createElement('div');
+      row.className = 'med-row';
+      // Create inputs for medication name, dose and dates
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'med-name';
+      nameInput.placeholder = 'Nombre';
+      nameInput.value = med.name || '';
+      const doseInput = document.createElement('input');
+      doseInput.type = 'text';
+      doseInput.className = 'med-dose';
+      doseInput.placeholder = 'Dosis';
+      doseInput.value = med.dose || '';
+      const startInput = document.createElement('input');
+      startInput.type = 'date';
+      startInput.className = 'med-start';
+      startInput.value = med.start || '';
+      const endInput = document.createElement('input');
+      endInput.type = 'date';
+      endInput.className = 'med-end';
+      endInput.value = med.end || '';
+      // Remove button
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-med-btn';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Eliminar medicamento';
+      removeBtn.addEventListener('click', () => {
+        row.remove();
+      });
+      // Append elements to row
+      row.appendChild(nameInput);
+      row.appendChild(doseInput);
+      row.appendChild(startInput);
+      row.appendChild(endInput);
+      row.appendChild(removeBtn);
+      medContainer.appendChild(row);
+    }
+
+    /**
+     * Add a note item to the notes container. A note item contains a date label
+     * (the current date when created or the provided date from existing data), a
+     * textarea for the note text, and a button to remove the note. When editing
+     * an existing note, supply an object with { text: 'note', date: 'YYYY-MM-DD HH:MM' }.
+     */
+    function addNote(note = {}) {
+      const notesContainer = document.getElementById('notes-container');
+      const item = document.createElement('div');
+      item.className = 'note-item';
+      // Date label: use provided date or generate current date/time string
+      const dateLabel = document.createElement('div');
+      dateLabel.className = 'note-date';
+      if (note.date) {
+        dateLabel.textContent = note.date;
+      } else {
+        const now = new Date();
+        // Format as YYYY-MM-DD HH:MM
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        dateLabel.textContent = `${year}-${month}-${day} ${hours}:${minutes}`;
+      }
+      const textArea = document.createElement('textarea');
+      textArea.className = 'note-text';
+      textArea.placeholder = 'Escriba la nota...';
+      textArea.rows = 2;
+      textArea.value = note.text || '';
+      // Remove note button
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-note-btn';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Eliminar nota';
+      removeBtn.addEventListener('click', () => {
+        item.remove();
+      });
+      // Append components
+      item.appendChild(dateLabel);
+      item.appendChild(textArea);
+      item.appendChild(removeBtn);
+      notesContainer.appendChild(item);
+    }
+
+    /**
+     * Add a task row to the tasks container. A task row contains an input
+     * for the task description and a remove button. Tasks created in the modal
+     * are initially incomplete. When editing an existing patient, the provided
+     * object can have { description: '...', completed: true/false } to pre-fill
+     * and mark the row as completed (for internal use). Completed tasks will
+     * not appear in the global pending list.
+     */
+    function addTaskRow(task = {}) {
+      const tasksContainer = document.getElementById('tasks-container');
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      // store completed state in data attribute to preserve when saving
+      if (typeof task.completed !== 'undefined') {
+        row.dataset.completed = task.completed;
+      }
+      // Input for description
+      const descInput = document.createElement('input');
+      descInput.type = 'text';
+      descInput.className = 'task-desc';
+      descInput.placeholder = 'Descripción de la tarea';
+      descInput.value = task.description || '';
+      // Remove button
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-task-btn';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Eliminar tarea';
+      removeBtn.addEventListener('click', () => {
+        row.remove();
+      });
+      // Append to row
+      row.appendChild(descInput);
+      row.appendChild(removeBtn);
+      tasksContainer.appendChild(row);
+    }
+
+    /**
+     * Export patient data to a JSON file. This creates a JSON representation
+     * of the patient records stored in localStorage and triggers a download
+     * of the resulting file (patients.json). Users can then import this file
+     * on another device or browser to restore the data.
+     */
+    function exportData() {
+      const data = JSON.stringify(getPatients(), null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'patients.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Import patient data from a JSON file selected by the user. The file
+     * should contain an array of patient objects with the same structure used
+     * in this application. After loading the file contents, the data is saved
+     * to localStorage and the view is refreshed.
+     */
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (Array.isArray(data)) {
+            setPatients(data);
+            loadPatients();
+            alert('Datos importados correctamente.');
+          } else {
+            alert('El archivo no contiene un formato válido.');
+          }
+        } catch (err) {
+          alert('Error al importar los datos: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /**
+     * Update the global pending tasks list. This function iterates through
+     * all patients stored in localStorage and collects tasks that are not
+     * marked as completed. Each pending task is displayed with the bed
+     * number and a button to mark it as done. When a task is completed,
+     * it is removed from the list and persisted to localStorage.
+     */
+    function updatePendingTasks() {
+      const tasksList = document.getElementById('tasks-list');
+      const pendingDiv = document.getElementById('pending-tasks');
+      if (!tasksList || !pendingDiv) return;
+      tasksList.innerHTML = '';
+      const patients = getPatients();
+      let hasPending = false;
+      patients.forEach((patient, pIndex) => {
+        if (patient.tasks && patient.tasks.length) {
+          patient.tasks.forEach((task, tIndex) => {
+            if (!task.completed) {
+              hasPending = true;
+              const li = document.createElement('li');
+              const textSpan = document.createElement('span');
+              textSpan.innerHTML = `<strong>Cama ${patient.bedNumber || ''}</strong> – ${task.description}`;
+              const btn = document.createElement('button');
+              btn.className = 'complete-task-btn';
+              btn.textContent = 'Completar';
+              btn.addEventListener('click', () => {
+                // Mark task as completed
+                patients[pIndex].tasks[tIndex].completed = true;
+                setPatients(patients);
+                loadPatients();
+              });
+              li.appendChild(textSpan);
+              li.appendChild(btn);
+              tasksList.appendChild(li);
+            }
+          });
+        }
+      });
+      pendingDiv.style.display = hasPending ? 'block' : 'none';
+    }
+
+    // Event listeners for dynamic buttons and utilities
+    document.getElementById('add-med-btn').addEventListener('click', () => addMedicationRow());
+    document.getElementById('add-note-btn').addEventListener('click', () => addNote());
+    document.getElementById('export-btn').addEventListener('click', exportData);
+    document.getElementById('import-file').addEventListener('change', importData);
+
+    // Add task row
+    document.getElementById('add-task-btn').addEventListener('click', () => addTaskRow());
+
+    // Calculator functionality
+    const calcBtn = document.getElementById('calculator-btn');
+    const calcOverlay = document.getElementById('calculator-overlay');
+    const calcModal = document.getElementById('calculator-modal');
+    const medSelect = document.getElementById('medication-select');
+    const weightInput = document.getElementById('weight-input');
+    const doseResult = document.getElementById('dose-result');
+    const closeCalcBtn = document.getElementById('close-calculator-btn');
+
+    // Dataset for calculator: medication name with mgPerKg (per dose), optional mgPerKgDay and frequency
+    const calcMedications = {
+      'Acetaminofén': { mgPerKg: 12.5, note: 'Cada 4–6 h' },
+      'Ibuprofeno': { mgPerKg: 7.5, note: 'Cada 6–8 h' },
+      'Amoxicilina': { mgPerKg: 35, note: 'Cada 12 h' },
+      'Azitromicina (día 1)': { mgPerKg: 10, note: 'Día 1' },
+      'Azitromicina (días 2–5)': { mgPerKg: 5, note: 'Días 2–5' },
+      'Cefalexina': { mgPerKg: 22.5, note: 'Cada 8 h' },
+      'Ceftriaxona': { mgPerKg: 60, note: 'Cada 24 h' },
+      'Ampicilina': { mgPerKg: 25, note: 'Cada 4–6 h' },
+      'Cefazolina': { mgPerKg: 30, note: 'Cada 6 h' },
+      'Clindamicina': { mgPerKg: 10, note: 'Cada 6–8 h' },
+      'Gentamicina': { mgPerKg: 2.25, note: 'Cada 8 h' },
+      'Metronidazol (mantenimiento)': { mgPerKg: 7.5, note: 'Cada 6 h' },
+      'Vancomicina': { mgPerKg: 10, note: 'Cada 6 h' },
+      'Ampicilina/Sulbactam': { mgPerKg: 18.75, note: 'Cada 6 h' },
+      'Piperacilina/Tazobactam': { mgPerKg: 70, note: 'Dividir cada 6–8 h' },
+      'Captopril': { mgPerKg: 0.5, note: 'Cada 8 h' },
+      'Diazóxido': { mgPerKg: 5, note: 'Dosis única' },
+      'Hidralazina': { mgPerKg: 0.15, note: 'Cada 4–6 h' },
+      'Labetalol': { mgPerKg: 0.25, note: 'Cada 1–2 h' },
+      'Propranolol': { mgPerKg: 0.08, note: 'Cada 6–8 h' },
+      'Ketorolac': { mgPerKg: 0.5, note: 'Cada 6 h' },
+      'Fentanilo': { mgPerKg: 0.001, note: 'Cada 1 h (µg/kg)' },
+      'Hidrocodona/Oxicodona': { mgPerKg: 0.1, note: 'Cada 4 h' },
+      'Morfina IV': { mgPerKg: 0.1, note: 'Cada 2–4 h' },
+      'Metoclopramida': { mgPerKg: 0.15, note: 'Cada 6 h' },
+      'Omeprazol': { mgPerKg: 0.7, note: '1–2 veces/día' },
+      'Ondansetrón': { mgPerKg: 0.15, note: 'Cada 8 h' },
+      'Difenhidramina': { mgPerKg: 0.5, note: 'Cada 6 h' },
+      'Hidroxicina': { mgPerKg: 0.5, note: 'Cada 6 h' },
+      'Salbutamol nebulizado': { mgPerKg: 0.15, note: 'Según necesidad' },
+      'Aminofilina (mantenimiento)': { mgPerKg: 1, note: 'mg/kg/h (infusión)' },
+      'Epinefrina (1:1000)': { mgPerKg: 0.01, note: 'Dosis única SC' },
+      'Atropina': { mgPerKg: 0.02, note: 'Dosis única' },
+      'Adenosina': { mgPerKg: 0.1, note: 'Bolo IV' },
+      'Diazepam': { mgPerKg: 0.2, note: 'IV/IO/IM' }
+    };
+
+    // Populate medication select options
+    function populateMedicationOptions() {
+      medSelect.innerHTML = '';
+      Object.keys(calcMedications).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key;
+        medSelect.appendChild(opt);
+      });
+    }
+
+    // Compute dose based on weight and selected medication
+    function computeDose() {
+      const medName = medSelect.value;
+      const weight = parseFloat(weightInput.value);
+      doseResult.innerHTML = '';
+      if (!medName || isNaN(weight) || weight <= 0) return;
+      const med = calcMedications[medName];
+      if (!med) return;
+      let doseMg = med.mgPerKg * weight;
+      // Format dose: if less than 0.01 mg, convert to micrograms
+      let doseText = '';
+      if (doseMg < 0.01) {
+        // convert to micrograms
+        doseText = `${(doseMg * 1000).toFixed(2)} µg/dosis`;
+      } else {
+        doseText = `${doseMg.toFixed(2)} mg/dosis`;
+      }
+      doseResult.innerHTML = `<p>Dosis aproximada para ${medName}: <strong>${doseText}</strong></p><p>Frecuencia sugerida: ${med.note}</p>`;
+    }
+
+    calcBtn.addEventListener('click', () => {
+      populateMedicationOptions();
+      doseResult.innerHTML = '';
+      weightInput.value = '';
+      calcOverlay.style.display = 'flex';
+    });
+    // Close calculator
+    closeCalcBtn.addEventListener('click', () => {
+      calcOverlay.style.display = 'none';
+    });
+    // Update dose result on change
+    medSelect.addEventListener('change', computeDose);
+    weightInput.addEventListener('input', computeDose);
+  </script>
+</body>
+</html>
